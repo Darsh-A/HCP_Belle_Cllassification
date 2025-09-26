@@ -1,4 +1,4 @@
-\# Event Classification for HEP
+# Event Classification for HEP
 
 
 
@@ -10,13 +10,13 @@ This repo holds the code for the Data Science (IDC409 (Intro to DS and ML)) proj
 
 
 
-\## Info
+## Info
 
 
 
 
 
-\### Event Type Flags:
+### Event Type Flags:
 
 
 
