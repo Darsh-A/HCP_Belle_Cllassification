@@ -1,4 +1,20 @@
+# misc
 references
+
+# basf2 folders
 releases
 tools
+externals
+sim
+
+# data
+data
 data\data_hep - data_hep.csv
+data/data_hep - data_hep.csv
+data/data_hep.csv
+data\data_hep.csv
+
+# python stuff
+venv
+__pycache__
+src/__pycache__

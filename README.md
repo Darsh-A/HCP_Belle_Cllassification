@@ -51,6 +51,20 @@ $e^+ e^- \\to s \\bar{s}$ = 5
 For binary add (0 and 1) to one class and (2,3,4, and 5) to other class
 
 
+## Install
+
+1. Setup and activate env
+
+`python -m venv venv`
+
+On Windows : `.\venv\Scripts\activate`
+
+
+2. Install dependencies
+
+`pip install -r requirements.txt`
+
+
 
 ## Setting up Basf2
 
@@ -92,3 +106,35 @@ Choose a release and install it by
 
 `b2install-release <release version> # Example b2install-release 09-08-04`
 
+Approx 2GB
+
+You might need to install some dependencies if it fails: ` sudo apt install scons gfortran python3-dev`
+
+8. Install the externals (dependencies)
+
+`b2install-externals <external version> # Example b2install-externals 02-02-04`
+
+Approx 6.5GB
+
+You can check the external version by checking the error message in `b2setup release-<version>`
+
+9. Run the software
+
+`basf2 --info`
+
+### Running Basf2
+
+1. Start a WSL environment in the project directory (in whatever code editior like vs code)
+
+2. Source and Setup the basf2 env
+
+`source <tools_dir>/tools/b2setup`
+
+Example:
+
+`source /mnt/a/DSci/Projects/HEP_Event_Classf/tools/b2setup`
+
+`b2setup release-09-00-04`
+
+3. Run basf2 with a script
+`basf2 <script.py> # Example basf2 myscript.py`
