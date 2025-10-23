@@ -74,13 +74,11 @@ On Windows : `.\venv\Scripts\activate`
 Add these lines to specific files:
 
 include/FastBDT.h : 
-```#include <cstdint>
-#include <limits>
-```
+`#include <cstdint>`
+`#include <limits>`
+
 src/FastBDT.cxx  right after `#include "FastBDT_IO.h"` : 
-```
-#include <cstdint>
-```
+`#include <cstdint`
 
 Run: `make`
 
