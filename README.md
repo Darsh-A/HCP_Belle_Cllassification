@@ -64,6 +64,41 @@ On Windows : `.\venv\Scripts\activate`
 
 `pip install -r requirements.txt`
 
+### FastBDT
+1. `git clone https://github.com/thomaskeck/FastBDT`
+
+2. in a Linux environment:
+
+`cmake .`
+
+Add these lines to specific files:
+
+include/FastBDT.h : 
+```#include <cstdint>
+#include <limits>
+```
+src/FastBDT.cxx  right after `#include "FastBDT_IO.h"` : 
+```
+#include <cstdint>
+```
+
+Run: `make`
+
+Run: 
+```
+sudo apt-get update
+sudo apt-get install rpm
+```
+
+Run: `sudo make install`
+
+Run: `make package`
+
+Run: `sudo python3 setup.py install`
+OR
+`pip install .`
+
+Test: `python3 -c 'import PyFastBDT; print("PyFastBDT was installed successfully!")'`
 
 
 ## Setting up Basf2

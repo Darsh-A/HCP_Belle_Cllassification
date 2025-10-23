@@ -1,6 +1,10 @@
 # misc
 references
 
+# Others
+packages
+packages
+
 # basf2 folders
 releases
 tools
@@ -16,5 +20,7 @@ data\data_hep.csv
 
 # python stuff
 venv
+venv_wsl
 __pycache__
 src/__pycache__
+
