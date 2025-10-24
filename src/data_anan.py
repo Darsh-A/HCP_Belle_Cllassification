@@ -15,12 +15,6 @@ class DataPreprocessing:
     """
     
     @staticmethod
-    def data_import(data):
-        """Import CSV data into a pandas DataFrame"""
-        df = pd.read_csv(data)
-        return df
-    
-    @staticmethod
     def data_correlation(df, threshold=0.9, preview=False):
         """Find highly correlated feature pairs above the threshold"""
         features = df.drop(columns=['index', 'type'])
