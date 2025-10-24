@@ -1,5 +1,3 @@
-# train_classifier.py
-
 import pandas as pd
 import numpy as np
 from PyFastBDT import FastBDT
