@@ -62,3 +62,12 @@ class Utils:
         plt.show()
 
         return roc_auc
+    
+    @staticmethod
+    def check_null(X):
+        
+        if X.isnull().sum().sum() > 0:
+            print(f"\nMissing values found: {X.isnull().sum().sum()}")
+            X = X.fillna(X.mean())
+        return X
+        
