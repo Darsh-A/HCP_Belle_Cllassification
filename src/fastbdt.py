@@ -6,9 +6,12 @@ from PyFastBDT import FastBDT
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_curve, auc, accuracy_score
 import matplotlib.pyplot as plt
+import os
 
-from utils import Utils
-def FastBDT_binary_classification(df):
+from .utils import Utils
+
+@staticmethod
+def FastBDT_binary_classification(df,plotname="fastbdt_roc_curve.png"):
     print("--- FastBDT Binary Classification ---")
 
     X, y = Utils.bin_classification(df)
@@ -37,14 +40,10 @@ def FastBDT_binary_classification(df):
     accuracy = accuracy_score(y_test, y_pred_class)
     print(f"\nModel Accuracy on Test Set: {accuracy:.4f}")
 
-    Utils.plot_roc(y_test, y_pred_scores)
+    Utils.plot_roc(y_test, y_pred_scores,plotname=plotname)
 
     print("\nIntern Feature Importance:")
-    print(bdt.internFeatureImportance())
-
-    print("\nExtern Feature Importance:")
-    print(bdt.externFeatureImportance(X_train.values, y_train.values, None, X_test.values, y_test.values, None))
-    
+    print(bdt.internFeatureImportance()) 
 # FastBDT_binary_classification(
 #     df = Utils.data_import('../data/data_hep - data_hep.csv')
 # )
