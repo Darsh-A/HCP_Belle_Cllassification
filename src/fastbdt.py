@@ -8,36 +8,43 @@ from sklearn.metrics import roc_curve, auc, accuracy_score
 import matplotlib.pyplot as plt
 
 from utils import Utils
+def FastBDT_binary_classification(df):
+    print("--- FastBDT Binary Classification ---")
 
-print("--- FastBDT Binary Classification ---")
+    X, y = Utils.bin_classification(df)
 
-df = Utils.data_import('../data/data_hep - data_hep.csv')
+    print("\nData distribution:")
+    print(y.value_counts())
+    print(f"\nUsing {len(X.columns)} features for training.")
 
-X, y = Utils.bin_classification(df)
+    X_train, X_test, y_train, y_test = Utils.data_split(X, y, ratio=0.3)
 
-print("\nData distribution:")
-print(y.value_counts())
-print(f"\nUsing {len(X.columns)} features for training.")
+    print(f"\nTraining set size: {len(X_train)}")
+    print(f"Testing set size:  {len(X_test)}")
 
-X_train, X_test, y_train, y_test = Utils.data_split(X, y, ratio=0.3)
+    bdt = FastBDT.Classifier()
 
-print(f"\nTraining set size: {len(X_train)}")
-print(f"Testing set size:  {len(X_test)}")
+    print("\nTraining the FastBDT model...")
+    bdt.fit(X_train.values, y_train.values)
+    print("Training complete!")
 
-bdt = FastBDT.Classifier()
+    y_pred_scores = bdt.predict(X_test.values)
 
-print("\nTraining the FastBDT model...")
-bdt.fit(X_train.values, y_train.values)
-print("Training complete!")
+    # To calculate accuracy, we need to convert scores into class labels (0 or 1).
+    # A common threshold is 0.5.
+    y_pred_class = (y_pred_scores > 0.5).astype(int)
 
+    accuracy = accuracy_score(y_test, y_pred_class)
+    print(f"\nModel Accuracy on Test Set: {accuracy:.4f}")
 
-y_pred_scores = bdt.predict(X_test.values)
+    Utils.plot_roc(y_test, y_pred_scores)
 
-# To calculate accuracy, we need to convert scores into class labels (0 or 1).
-# A common threshold is 0.5.
-y_pred_class = (y_pred_scores > 0.5).astype(int)
+    print("\nIntern Feature Importance:")
+    print(bdt.internFeatureImportance())
 
-accuracy = accuracy_score(y_test, y_pred_class)
-print(f"\nModel Accuracy on Test Set: {accuracy:.4f}")
-
-Utils.plot_roc(y_test, y_pred_scores)
+    print("\nExtern Feature Importance:")
+    print(bdt.externFeatureImportance(X_train.values, y_train.values, None, X_test.values, y_test.values, None))
+    
+# FastBDT_binary_classification(
+#     df = Utils.data_import('../data/data_hep - data_hep.csv')
+# )
