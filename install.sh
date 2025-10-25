@@ -3,6 +3,31 @@
 # Exit on any error
 set -e
 
+echo "Checking for large data file..."
+DATA_FILE="data/data_hep - data_hep.csv"
+MIN_SIZE=10000000  # 10MB minimum (adjust as needed)
+
+if [ -f "$DATA_FILE" ]; then
+    FILE_SIZE=$(stat -c%s "$DATA_FILE" 2>/dev/null || stat -f%z "$DATA_FILE" 2>/dev/null)
+    echo "Found data file: $FILE_SIZE bytes"
+    
+    if [ "$FILE_SIZE" -lt "$MIN_SIZE" ]; then
+        echo "Data file is too small (likely an LFS pointer). Installing Git LFS..."
+        sudo apt-get install -y git-lfs
+        git lfs install
+        echo "Pulling actual data file from LFS..."
+        git lfs pull --include="$DATA_FILE"
+    else
+        echo "Data file size looks good!"
+    fi
+else
+    echo "Warning: Data file not found at $DATA_FILE"
+    echo "Attempting to pull from Git LFS..."
+    sudo apt-get install -y git-lfs
+    git lfs install
+    git lfs pull
+fi
+
 echo "Creating virtual environment..."
 python3 -m venv venv
 
