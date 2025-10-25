@@ -4,7 +4,7 @@ like decorations, utilities, etc.
 """
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_curve, auc, accuracy_score
+from sklearn.metrics import roc_curve, roc_auc_score, auc, accuracy_score
 from sklearn.preprocessing import StandardScaler, QuantileTransformer, PowerTransformer
 import pandas as pd
 import numpy as np
@@ -37,41 +37,72 @@ class Utils:
         return X, y
     
     @staticmethod
-    def plot_roc(y_test, y_pred_scores,plotname):
+    def give_roc_auc_score(y_test, y_pred_scores):
+        score = roc_auc_score(y_test, y_pred_scores)
+        return score
 
+    @staticmethod
+    def give_roc_curve(y_test, y_pred_scores):
+        fpr, tpr, thresholds = roc_curve(y_test, y_pred_scores)
+        roc_auc = auc(fpr, tpr)
+        return fpr, tpr, roc_auc
+
+
+    @staticmethod
+    def give_accuracy(y_test, y_pred):
+        accuracy = accuracy_score(y_test, y_pred)
+        return accuracy
+
+
+    @staticmethod
+    def plot_roc_comparison(roc_data, plotname):
+        """
+        Plot ROC curves for multiple models on the same plot.
+        
+        Args:
+            roc_data: Either a dictionary {model_name: (fpr, tpr, roc_auc)} 
+                     or a list of tuples [(model_name, (fpr, tpr, roc_auc))]
+            plotname: Name of the output plot file
+        """
         plots_dir = "plots"
         os.makedirs(plots_dir, exist_ok=True)
 
-
-        fpr, tpr, thresholds = roc_curve(y_test, y_pred_scores)
-        roc_auc = auc(fpr, tpr)
-
-        print(f"Area Under ROC Curve (AUC): {roc_auc:.4f}")
-
         plt.figure(figsize=(8, 6))
-        plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+
+        # Convert list to dict if necessary
+        if isinstance(roc_data, list):
+            roc_data_dict = dict(roc_data)
+        else:
+            roc_data_dict = roc_data
+
+        # Iterate over each model's data in the dictionary
+        for model_label, (fpr, tpr, roc_auc) in roc_data_dict.items():
+            print(f"Model: {model_label} | Area Under ROC Curve (AUC): {roc_auc:.4f}")
+            
+            # Plot the curve for this model
+            plt.plot(fpr, tpr, lw=2, 
+                    label=f'{model_label} ROC (area = {roc_auc:.2f})')
+
+        # --- Plot formatting (done once after all loops) ---
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--') # 50/50 chance line
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('Receiver Operating Characteristic (ROC) Curve')
+        plt.title('Receiver Operating Characteristic (ROC) Comparison')
         plt.legend(loc="lower right")
-        print("\nGenerating ROC curve plot...")
+        
+        print("\nGenerating ROC curve comparison plot...")
         plot_path = os.path.join(plots_dir, plotname)
         plt.savefig(plot_path)
         print(f"Plot saved as '{plot_path}'")
         plt.show()
 
-        return roc_auc
-    
+
     @staticmethod
-    def check_null(X):
-        
-        if X.isnull().sum().sum() > 0:
-            print(f"\nMissing values found: {X.isnull().sum().sum()}")
-            X = X.fillna(X.mean())
-        return X
+    def give_conf_matrix(y_test, y_pred):
+        from sklearn.metrics import confusion_matrix
+        return confusion_matrix(y_test, y_pred)
         
 
 

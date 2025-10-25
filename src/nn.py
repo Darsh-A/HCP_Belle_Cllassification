@@ -844,6 +844,106 @@ def train_baseline_nn(
     return nn_clf, test_metrics, overfitting_analysis
 
 
+def train_neural_network(
+    data,
+    hidden_sizes: List[int] = [128, 64, 32],
+    dropout_rate: float = 0.3,
+    learning_rate: float = 1e-3,
+    weight_decay: float = 1e-4,
+    batch_size: int = 256,
+    epochs: int = 50,
+    early_stopping_patience: int = 5,
+    importance_threshold: float = 0.01,
+    random_state: int = 42
+):
+    """
+    Train a Neural Network model on the provided data.
+    
+    Args:
+        data: pandas DataFrame containing the dataset
+        hidden_sizes: List of hidden layer sizes
+        dropout_rate: Dropout probability
+        learning_rate: Learning rate for Adam optimizer
+        weight_decay: L2 regularization strength
+        batch_size: Batch size for training
+        epochs: Maximum number of training epochs
+        early_stopping_patience: Patience for early stopping
+        importance_threshold: Threshold for feature importance (not applicable for NN, included for API consistency)
+        random_state: Random seed for reproducibility
+        
+    Returns:
+        dict: Dictionary with keys 'confusion_matrix', 'roc_auc_score', 'accuracy', 'model',
+              'feature_importance', 'reduced_features'
+    """
+    from utils import Utils, DataTransformations
+    
+    # Prepare data
+    X, y = Utils.bin_classification(data)
+    
+    # Split data into train and test
+    X_train, X_test, y_train, y_test = Utils.data_split(X, y, ratio=0.3)
+    
+    # Create validation split from training data
+    X_train_new, X_val, y_train_new, y_val = DataTransformations.create_validation_split(
+        X_train, y_train, val_size=0.2, random_state=random_state
+    )
+    
+    # Convert to numpy arrays
+    X_train_np = X_train_new.values
+    X_val_np = X_val.values
+    X_test_np = X_test.values
+    y_train_np = y_train_new.values
+    y_val_np = y_val.values
+    y_test_np = y_test.values
+    
+    # Initialize classifier
+    nn_clf = NeuralNetClassifier(
+        hidden_sizes=hidden_sizes,
+        dropout_rate=dropout_rate,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        batch_size=batch_size,
+        epochs=epochs,
+        early_stopping_patience=early_stopping_patience,
+        random_state=random_state
+    )
+    
+    # Train
+    nn_clf.fit(X_train_np, y_train_np, X_val_np, y_val_np, verbose=False)
+    
+    # Get predictions on test set
+    y_pred_proba = nn_clf.predict_proba(X_test_np)
+    y_pred = (y_pred_proba > 0.5).astype(int)
+    
+    # Calculate metrics
+    cm = Utils.give_conf_matrix(y_test_np, y_pred)
+    roc_auc_score = Utils.give_roc_auc_score(y_test_np, y_pred_proba)
+    accuracy = Utils.give_accuracy(y_test_np, y_pred)
+    
+    # Neural networks don't have traditional feature importance like tree models
+    # We can calculate gradient-based importance or use input perturbation
+    # For simplicity and API consistency, return empty feature importance
+    feature_names = X.columns.tolist()
+    feature_importance = {feature: 0.0 for feature in feature_names}
+    reduced_features = []  # NN doesn't support feature reduction in the same way
+    
+    # Save model
+    models_dir = "models"
+    os.makedirs(models_dir, exist_ok=True)
+    model_path = os.path.join(models_dir, "neural_network_model.pt")
+    nn_clf.save_model(model_path)
+    
+    # Return results as dictionary
+    return {
+        'confusion_matrix': cm,
+        'roc_auc_score': roc_auc_score,
+        'accuracy': accuracy,
+        'model': nn_clf,
+        'feature_importance': feature_importance,
+        'reduced_features': reduced_features
+    }
+
+
 def kfold_cross_validation(
     X: np.ndarray,
     y: np.ndarray,
@@ -991,3 +1091,24 @@ def kfold_cross_validation(
         'avg_accuracy_gap': avg_acc_gap,
         'avg_auc_gap': avg_auc_gap
     }
+
+
+if __name__ == "__main__":
+    # Example usage
+    from utils import Utils
+    
+    df = Utils.data_import('data/data_hep - data_hep.csv')
+    
+    # Train Neural Network
+    nn_results = train_neural_network(
+        df,
+        hidden_sizes=[128, 64, 32],
+        dropout_rate=0.3,
+        learning_rate=1e-3,
+        epochs=50
+    )
+    
+    print("\nNeural Network Results:")
+    print(f"Accuracy: {nn_results['accuracy']:.4f}")
+    print(f"ROC-AUC: {nn_results['roc_auc_score']:.4f}")
+    print(f"Confusion Matrix:\n{nn_results['confusion_matrix']}")

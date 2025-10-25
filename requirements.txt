@@ -41,6 +41,7 @@ stack-data==0.6.3
 threadpoolctl==3.6.0
 torch>=2.0.0
 torchvision>=0.15.0
+pytorch-tabnet
 tornado==6.5.2
 traitlets==5.14.3
 tzdata==2025.2
