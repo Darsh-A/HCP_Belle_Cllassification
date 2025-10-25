@@ -3,9 +3,13 @@
 # Exit on any error
 set -e
 
-echo "Checking for large data file..."
+echo "====================================="
+echo "Starting installation script..."
+echo "====================================="
+
+echo "Checking for data fileS..."
 DATA_FILE="data/data_hep - data_hep.csv"
-MIN_SIZE=10000000  # 10MB minimum (adjust as needed)
+MIN_SIZE=10000000  # 10MB minimum
 
 if [ -f "$DATA_FILE" ]; then
     FILE_SIZE=$(stat -c%s "$DATA_FILE" 2>/dev/null || stat -f%z "$DATA_FILE" 2>/dev/null)
@@ -27,6 +31,10 @@ else
     git lfs install
     git lfs pull
 fi
+
+echo "====================================="
+echo "Package Setup"
+echo "====================================="
 
 echo "Creating virtual environment..."
 python3 -m venv venv
@@ -70,8 +78,20 @@ make
 echo "Installing FastBDT to virtual environment..."
 pip install .
 
+
+echo "====================================="
+echo "Almost done :3"
+echo "====================================="
+
 echo "Returning to parent directory..."
 cd ..
 
+mkdir plots
+
 echo "Setup complete!"
 echo "To activate the environment in the future, run: source venv/bin/activate"
+
+echo "----------------------------------"
+
+echo "Example demonstration is in showcase.ipynb"
+echo "Have a good day ^^"
