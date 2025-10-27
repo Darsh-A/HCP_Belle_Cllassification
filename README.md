@@ -1,102 +1,36 @@
 # Event Classification for HEP
 
-
-
 This repo holds the code for the Data Science (IDC409 (Intro to DS and ML)) project of Group 23 
-
-
 
 -----------
 
-
-
 ## Info
-
-
-
-
 
 ### Event Type Flags:
 
-
-
-
-
 $e^+ e^- \\to \\Upsilon (4S) \\to B^+ B^-$ = 0
-
-
 
 $e^+ e^- \\to \\Upsilon(4S) \\to B^0 \\bar{B}^0$ = 1
 
-
-
 $e^+ e^- \\to c \\bar{c}$ = 2
-
-
 
 $e^+ e^- \\to u \\bar{u}$ = 3
 
-
-
 $e^+ e^- \\to d \\bar{d}$ = 4
 
-
-
 $e^+ e^- \\to s \\bar{s}$ = 5
-
-
-
-
 
 For binary add (0 and 1) to one class and (2,3,4, and 5) to other class
 
 
 ## Install
+1. clone the repo
 
-1. Setup and activate env
-
-`python -m venv venv`
-
-On Windows : `.\venv\Scripts\activate`
-
-
-2. Install dependencies
-
-`pip install -r requirements.txt`
-
-### FastBDT
-1. `git clone https://github.com/thomaskeck/FastBDT`
-
-2. in a Linux environment:
-
-`cmake .`
-
-Add these lines to specific files:
-
-include/FastBDT.h : 
-`#include <cstdint>`
-`#include <limits>`
-
-src/FastBDT.cxx  right after `#include "FastBDT_IO.h"` : 
-`#include <cstdint`
-
-Run: `make`
-
-Run: 
+2. Run the setup script
 ```
-sudo apt-get update
-sudo apt-get install rpm
+chmod +x install.sh
+./install.sh
 ```
-
-Run: `sudo make install`
-
-Run: `make package`
-
-Run: `sudo python3 setup.py install`
-OR
-`pip install .`
-
-Test: `python3 -c 'import PyFastBDT; print("PyFastBDT was installed successfully!")'`
 
 
 ## Setting up Basf2
