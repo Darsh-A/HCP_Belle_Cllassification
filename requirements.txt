@@ -6,3 +6,4 @@ xgboost
 setuptools
 build
 seaborn
+lightgbm
