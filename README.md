@@ -46,7 +46,7 @@ $e^+ e^- \\to s \\bar{s}$ = 5
 
 ## Installation
 
-### Linux
+### Linux (WSL Tested)
 
 1. **Clone the repository**
 ```bash
