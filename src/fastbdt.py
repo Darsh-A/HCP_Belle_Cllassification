@@ -153,6 +153,145 @@ def randomized_search_fastbdt(
     }
 
 
+
+
+def load_best_params():
+    """Load best parameters from JSON configuration file."""
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'best_model_params.json')
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return config['fastbdt']
+
+
+def randomized_search_fastbdt(
+    data,
+    param_distributions=None,
+    n_iter=20,
+    n_folds=5,
+    random_state=42
+):
+    """
+    Perform randomized search for FastBDT hyperparameter tuning.
+    
+    Args:
+        data: Tuple of (X, y, X_train, X_test, y_train, y_test)
+        param_distributions: Dictionary of parameter distributions to sample from.
+                           Each value can be a list (discrete choices) or tuple (min, max) for continuous.
+        n_iter: Number of random parameter combinations to try (default=20)
+        n_folds: Number of cross-validation folds (default=5)
+        random_state: Random seed for reproducibility (default=42)
+        
+    Returns:
+        dict: Dictionary with 'best_params', 'best_score', 'cv_results'
+    """
+    # Set random seed for reproducibility
+    random.seed(random_state)
+    np.random.seed(random_state)
+    
+    # Extract data from tuple
+    X, y, _, _, _, _ = data
+    
+    # Default parameter distributions if not provided
+    if param_distributions is None:
+        param_distributions = {
+            'nTrees': [50, 100, 150, 200, 250, 300],
+            'depth': [3, 4, 5, 6, 7, 8, 9, 10],
+            'shrinkage': (0.01, 0.3),  # Continuous range (learning rate)
+            'subsample': (0.5, 1.0),  # Continuous range
+        }
+    
+    best_score = -np.inf
+    best_params = None
+    cv_results = []
+    
+    print(f"Starting Randomized Search with {n_iter} iterations...\n")
+    
+    # Setup K-Fold cross-validation
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=random_state)
+    
+    for i in range(n_iter):
+        # Sample random parameters
+        current_params = {}
+        
+        for param_name, param_range in param_distributions.items():
+            if isinstance(param_range, tuple) and len(param_range) == 2:
+                # Continuous range (tuple)
+                if isinstance(param_range[0], float) or isinstance(param_range[1], float):
+                    current_params[param_name] = np.random.uniform(param_range[0], param_range[1])
+                else:
+                    current_params[param_name] = random.randint(param_range[0], param_range[1])
+            else:
+                # Discrete choices (list)
+                current_params[param_name] = random.choice(param_range)
+        
+        # Round continuous parameters for cleaner output
+        if 'shrinkage' in current_params:
+            current_params['shrinkage'] = round(current_params['shrinkage'], 4)
+        if 'subsample' in current_params:
+            current_params['subsample'] = round(current_params['subsample'], 4)
+        
+        # Perform cross-validation
+        fold_scores = []
+        
+        for fold_idx, (train_idx, val_idx) in enumerate(kf.split(X)):
+            X_train_fold = X.iloc[train_idx]
+            y_train_fold = y.iloc[train_idx]
+            X_val_fold = X.iloc[val_idx]
+            y_val_fold = y.iloc[val_idx]
+            
+            # Train FastBDT with current parameters
+            bdt = FastBDT.Classifier(
+                nTrees=current_params.get('nTrees', 150),
+                depth=current_params.get('depth', 6),
+                shrinkage=current_params.get('shrinkage', 0.1),
+                subsample=current_params.get('subsample', 0.8),
+                transform2probability=True
+            )
+            
+            bdt.fit(X_train_fold.values, y_train_fold.values)
+            
+            # Predict and calculate AUC
+            y_pred_proba = bdt.predict(X_val_fold.values)
+            fold_auc = roc_auc_score(y_val_fold, y_pred_proba)
+            fold_scores.append(fold_auc)
+        
+        # Calculate mean and std of AUC across folds
+        mean_auc = np.mean(fold_scores)
+        std_auc = np.std(fold_scores)
+        
+        # Store result
+        result_entry = {
+            'params': current_params.copy(),
+            'mean_auc': mean_auc,
+            'std_auc': std_auc
+        }
+        cv_results.append(result_entry)
+        
+        # Update best parameters
+        if mean_auc > best_score:
+            best_score = mean_auc
+            best_params = current_params.copy()
+        
+        print(f"Iteration {i+1}/{n_iter}: AUC = {mean_auc:.6f} (+/- {std_auc:.6f})")
+        print(f"  Params: nTrees={current_params.get('nTrees')}, "
+              f"depth={current_params.get('depth')}, "
+              f"shrinkage={current_params.get('shrinkage')}, "
+              f"subsample={current_params.get('subsample')}")
+    
+    print(f"\n{'='*80}")
+    print(f"Best Score (AUC): {best_score:.6f}")
+    print(f"Best Parameters:")
+    for key, value in best_params.items():
+        print(f"  {key}: {value}")
+    print(f"{'='*80}\n")
+    
+    return {
+        'best_params': best_params,
+        'best_score': best_score,
+        'cv_results': cv_results
+    }
+
+
 def train_fastbdt(
     data,
     nTrees=None,
