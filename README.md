@@ -78,7 +78,7 @@ The code is setup as follow
 -----------------
 
 ## Additional Things:
-
+Optional Thing for the project and arent required, just for reference
 
 ## Basf2 Setup Guide
 
