@@ -36,6 +36,7 @@ chmod +x install.sh
 ./install.sh
 ```
 
+#### Manual Installation:
 If any errors occur please run the commands manually after fixing the machine specific errors
 
 The required python packages can be installed as:
@@ -59,9 +60,24 @@ The code is setup as follow
 ## Codebase Guide:
 - All the models follow a similar structure for uniformity
 - All models consists of a tune function that finds the best hyperparameter for the model, we have already trained them using RandomSearch and GridSearch on our data and saved it in `data/retraining_runtime_vs_performance.csv`
-- 
+- All models output the following json:
+```
+    result = {
+        'confusion_matrix': cm,
+        'roc_auc_score': roc_auc_score,
+        'roc_curve': roc_curve,
+        'accuracy': accuracy,
+        'model': model,
+        'feature_importance': feature_importance,
+        'reduced_features': reduced_features,
+        'training_time': end_time - start_time
+    }
+```
+
 
 -----------------
+
+## Additional Things:
 
 
 ## Basf2 Setup Guide
