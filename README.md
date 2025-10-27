@@ -4,7 +4,7 @@ This repo holds the code for the Data Science (IDC409 (Intro to DS and ML)) proj
 
 -----------
 
-## Info
+## Data
 
 ### Event Type Flags:
 
@@ -24,7 +24,11 @@ For binary add (0 and 1) to one class and (2,3,4, and 5) to other class
 
 
 ## Install
-1. clone the repo
+### Linux
+1. Clone the repo
+```
+git clone https://github.com/Darsh-A/IDC409-Classification-of-Events.git
+```
 
 2. Run the setup script
 ```
@@ -32,76 +36,132 @@ chmod +x install.sh
 ./install.sh
 ```
 
+If any errors occur please run the commands manually after fixing the machine specific errors
 
-## Setting up Basf2
+The required python packages can be installed as:
+```
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-1. Run WSL in the Project directory
+> Note: FastBDT needs to build on a linux system, the Code base was tested and worked on on WSL
 
-`wsl <path to project directory>`
 
-2. Clone the Tools Repo
+## Info & Structure
+The code is setup as follow
+- All the model files and utility files are stored in `/src`
+- Showcase notebook is present as `showcase.ipynb`
+- The data folder holds the event type data used for this project, To generate data please install basf2 (guide given below) and then follow this [guide](https://training.belle2.org/online_book/basf2/cs.html?utm_=)
+- The trained models are saved in `/models` and the plots in `/plots` folder
 
-`git clone https://github.com/belle2/tools.git`
 
-3. Add the path to your .bashrc file
+## Codebase Guide:
+- All the models follow a similar structure for uniformity
+- All models consists of a tune function that finds the best hyperparameter for the model, we have already trained them using RandomSearch and GridSearch on our data and saved it in `data/retraining_runtime_vs_performance.csv`
+- 
 
-`export PATH=/mnt/a/DSci/Projects/HEP_Event_Classf/tools:$PATH`
+-----------------
 
-4. Source .bashrc
 
-`source ~/.bashrc`
+## Basf2 Setup Guide
 
-5. Give permission to the dir
+## Initial Setup
 
-`chmod +x /mnt/a/DSci/Projects/HEP_Event_Classf/tools/b2*`
+### 1. Launch WSL
+```bash
+wsl <path-to-project-directory>
+```
 
-6. Source basf2
+### 2. Clone Tools Repository
+```bash
+git clone https://github.com/belle2/tools.git
+```
 
-`source b2setup`
+### 3. Configure Environment
+Add to `.bashrc`:
+```bash
+export PATH=/mnt/a/DSci/Projects/HEP_Event_Classf/tools:$PATH
+```
 
-7. Check releases
+Source the configuration:
+```bash
+source ~/.bashrc
+```
 
-`b2install-release`
+### 4. Set Permissions
+```bash
+chmod +x /mnt/a/DSci/Projects/HEP_Event_Classf/tools/b2*
+```
 
-If you get a SHH error, run:
+### 5. Initialize Basf2
+```bash
+source b2setup
+```
 
-`git config --global url."https://github.com/".insteadOf git@github.com:`
+### 6. Install Release (~2GB)
+```bash
+b2install-release
+```
 
-Then run the release command again
+**If SSH error occurs:**
+```bash
+git config --global url."https://github.com/".insteadOf git@github.com:
+```
 
-Choose a release and install it by 
+Install specific release:
+```bash
+b2install-release <version>  # Example: b2install-release 09-00-04
+```
 
-`b2install-release <release version> # Example b2install-release 09-08-04`
+**If installation fails, install dependencies:**
+```bash
+sudo apt install scons gfortran python3-dev
+```
 
-Approx 2GB
+### 7. Install Externals (~6.5GB)
+Check required version from error message in `b2setup release-<version>`, then:
+```bash
+b2install-externals <version>  # Example: b2install-externals 02-02-04
+```
 
-You might need to install some dependencies if it fails: ` sudo apt install scons gfortran python3-dev`
+### 8. Verify Installation
+```bash
+basf2 --info
+```
 
-8. Install the externals (dependencies)
+---
 
-`b2install-externals <external version> # Example b2install-externals 02-02-04`
+## Running Basf2
 
-Approx 6.5GB
+### 1. Start WSL Session
+Open WSL in your project directory (VS Code or terminal)
 
-You can check the external version by checking the error message in `b2setup release-<version>`
+### 2. Activate Environment
+```bash
+source /mnt/a/DSci/Projects/HEP_Event_Classf/tools/b2setup
+b2setup release-09-00-04
+```
 
-9. Run the software
+### 3. Execute Scripts
+```bash
+basf2 <script.py>  # Example: basf2 myscript.py
+```
 
-`basf2 --info`
+---
 
-### Running Basf2
+## Quick Reference
 
-1. Start a WSL environment in the project directory (in whatever code editior like vs code)
+| Command | Purpose |
+|---------|---------|
+| `b2install-release` | List/install Basf2 releases |
+| `b2install-externals` | Install dependencies |
+| `b2setup <release>` | Activate specific release |
+| `basf2 --info` | Check installation |
 
-2. Source and Setup the basf2 env
+---
 
-`source <tools_dir>/tools/b2setup`
-
-Example:
-
-`source /mnt/a/DSci/Projects/HEP_Event_Classf/tools/b2setup`
-
-`b2setup release-09-00-04`
-
-3. Run basf2 with a script
-`basf2 <script.py> # Example basf2 myscript.py`
+## Notes
+- Replace `/mnt/a/DSci/Projects/HEP_Event_Classf/` with your actual project path
+- Total disk space required: ~8.5GB (2GB release + 6.5GB externals)
+- Setup needs to be done only once; afterwards just source and activate the environment

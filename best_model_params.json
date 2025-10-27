@@ -1,0 +1,53 @@
+{
+  "lightgbm": {
+    "objective": "binary",
+    "metric": "auc",
+    "verbosity": -1,
+    "boosting_type": "gbdt",
+    "max_depth": 4,
+    "learning_rate": 0.0632,
+    "subsample": 0.6521,
+    "colsample_bytree": 0.7624,
+    "min_child_samples": 20,
+    "num_leaves": 15,
+    "reg_alpha": 0.01,
+    "reg_lambda": 0.1,
+    "min_split_gain": 0,
+    "n_estimators": 500
+  },
+  "xgboost": {
+    "objective": "binary:logistic",
+    "eval_metric": "auc",
+    "device": "cuda",
+    "tree_method": "hist",
+    "max_depth": 4,
+    "learning_rate": 0.1186,
+    "subsample": 0.9754,
+    "colsample_bytree": 0.866,
+    "min_child_weight": 1,
+    "gamma": 0.2,
+    "reg_alpha": 0.01,
+    "reg_lambda": 1.0,
+    "n_estimators": 500
+  },
+  "fastbdt": {
+    "nTrees": 150,
+    "depth": 6,
+    "shrinkage": 0.1,
+    "subsample": 0.8,
+    "transform2probability": true
+  },
+  "decision_tree": {
+    "max_depth": 7,
+    "min_samples_split": 2,
+    "min_samples_leaf": 8,
+    "criterion": "entropy",
+    "max_features": null
+  },
+  "random_forest": {
+    "n_estimators": 200,
+    "max_depth": 10,
+    "min_samples_leaf": 5,
+    "random_state": 42
+  }
+}

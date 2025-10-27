@@ -5,6 +5,8 @@ references
 packages
 FastBDT
 models
+LightGBM
+plots
 
 # basf2 folders
 releases

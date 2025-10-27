@@ -87,11 +87,14 @@ echo "Returning to parent directory..."
 cd ..
 
 mkdir plots
+mkdir models
 
 echo "Setup complete!"
+echo "Thank you for being brave through all this :)"
 echo "To activate the environment in the future, run: source venv/bin/activate"
 
 echo "----------------------------------"
 
 echo "Example demonstration is in showcase.ipynb"
+
 echo "Have a good day ^^"

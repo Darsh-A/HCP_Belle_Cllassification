@@ -1,14 +1,13 @@
-"""XGBoost"""
-
+"""LightGBM Model"""
 
 import pandas as pd
 import numpy as np
-import xgboost as xgb
+import lightgbm as lgb
 import os
 import json
 import random
 import time
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, accuracy_score
 
 from utils import Utils
@@ -19,28 +18,51 @@ def load_best_params():
     config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'best_model_params.json')
     with open(config_path, 'r') as f:
         config = json.load(f)
-    return config['xgboost']
+    return config['lightgbm']
 
 
-def randomized_search_xgboost(
-    data, 
+def _check_cuda_availability():
+    """
+    Check if CUDA is available for LightGBM.
+    
+    Returns:
+        str: 'cuda' if available, 'cpu' otherwise
+    """
+    try:
+        # Try to create a simple dataset and train with CUDA
+        test_data = lgb.Dataset(np.random.rand(10, 5), label=np.random.randint(0, 2, 10))
+        test_params = {'objective': 'binary', 'device': 'cuda', 'verbosity': -1}
+        lgb.train(test_params, test_data, num_boost_round=1)
+        device = 'cuda'
+        print("✅ CUDA is available - LightGBM will use GPU")
+    except Exception:
+        device = 'cpu'
+        print("⚠️  CUDA not available - LightGBM will use CPU")
+    
+    return device
+
+
+def randomized_search_lightgbm(
+    X_train, 
+    y_train,
     param_distributions=None, 
     n_iter=20, 
     n_folds=5, 
-    num_boost_round=500,
+    num_boost_round=1500,
     early_stopping_rounds=50,
     random_state=42
 ):
     """
-    Perform randomized search for XGBoost hyperparameter tuning.
+    Perform randomized search for LightGBM hyperparameter tuning.
     
     Args:
-        data: pandas DataFrame containing the dataset
+        X_train: Training features (only training data, not full dataset!)
+        y_train: Training labels (only training data, not full dataset!)
         param_distributions: Dictionary of parameter distributions to sample from.
                            Each value can be a list (discrete choices) or tuple (min, max) for continuous.
         n_iter: Number of random parameter combinations to try (default=20)
         n_folds: Number of cross-validation folds (default=5)
-        num_boost_round: Maximum number of boosting rounds (default=500)
+        num_boost_round: Maximum number of boosting rounds (default=1500)
         early_stopping_rounds: Early stopping rounds for CV (default=50)
         random_state: Random seed for reproducibility (default=42)
         
@@ -51,31 +73,32 @@ def randomized_search_xgboost(
     random.seed(random_state)
     np.random.seed(random_state)
     
-    # Prepare data
-    X, y, X_train, X_test, y_train, y_test = data
-    
-    # Create DMatrix for CV
-    dtrain = xgb.DMatrix(X, label=y, feature_names=X.columns.tolist())
+    # Create LightGBM Dataset for CV - ONLY from training data to prevent data leakage
+    dtrain = lgb.Dataset(X_train, label=y_train)
     
     # Default parameter distributions if not provided
     if param_distributions is None:
         param_distributions = {
-            'max_depth': [3, 4, 5, 6, 7, 8, 9, 10],
+            'max_depth': [3, 4, 5, 6, 7, 8, 9, 10, -1],  # -1 means no limit
             'learning_rate': (0.01, 0.3),  # Continuous range
             'subsample': (0.5, 1.0),  # Continuous range
             'colsample_bytree': (0.5, 1.0),  # Continuous range
-            'min_child_weight': [1, 3, 5, 7, 10],
-            'gamma': [0, 0.1, 0.2, 0.3, 0.5],
+            'min_child_samples': [5, 10, 20, 30, 50],
+            'num_leaves': [15, 31, 63, 127, 255],
             'reg_alpha': [0, 0.01, 0.1, 0.5, 1.0],
-            'reg_lambda': [0.5, 1.0, 1.5, 2.0, 5.0]
+            'reg_lambda': [0, 0.01, 0.1, 0.5, 1.0],
+            'min_split_gain': [0, 0.01, 0.1, 0.5, 1.0]
         }
+    
+    # Detect CUDA availability
+    device = _check_cuda_availability()
     
     # Fixed parameters
     fixed_params = {
-        'objective': 'binary:logistic',
-        'eval_metric': 'auc',
-        'device': 'cuda',
-        'tree_method': 'hist'
+        'objective': 'binary',
+        'metric': 'auc',
+        'boosting_type': 'gbdt',
+        'device': device
     }
     
     best_score = -np.inf
@@ -89,7 +112,7 @@ def randomized_search_xgboost(
         current_params = fixed_params.copy()
         
         for param_name, param_range in param_distributions.items():
-            if isinstance(param_range, (list, tuple)) and len(param_range) == 2 and not isinstance(param_range, list):
+            if isinstance(param_range, tuple) and len(param_range) == 2:
                 # Continuous range (tuple)
                 if isinstance(param_range[0], float) or isinstance(param_range[1], float):
                     current_params[param_name] = np.random.uniform(param_range[0], param_range[1])
@@ -99,7 +122,7 @@ def randomized_search_xgboost(
                 # Discrete choices (list)
                 current_params[param_name] = random.choice(param_range)
         
-        # Round learning_rate for cleaner output
+        # Round continuous parameters for cleaner output
         if 'learning_rate' in current_params:
             current_params['learning_rate'] = round(current_params['learning_rate'], 4)
         if 'subsample' in current_params:
@@ -108,20 +131,21 @@ def randomized_search_xgboost(
             current_params['colsample_bytree'] = round(current_params['colsample_bytree'], 4)
         
         # Perform cross-validation
-        cv_result = xgb.cv(
+        cv_result = lgb.cv(
             current_params,
             dtrain,
             num_boost_round=num_boost_round,
             nfold=n_folds,
-            early_stopping_rounds=early_stopping_rounds,
-            verbose_eval=False,
-            seed=random_state
+            stratified=True,
+            shuffle=True,
+            seed=random_state,
+            callbacks=[lgb.early_stopping(stopping_rounds=early_stopping_rounds)]
         )
         
-        # Get best score (last row, test-auc-mean)
-        mean_auc = cv_result['test-auc-mean'].iloc[-1]
-        std_auc = cv_result['test-auc-std'].iloc[-1]
-        n_estimators = len(cv_result)
+        # Get best score (mean AUC from last iteration)
+        mean_auc = cv_result['valid auc-mean'][-1]
+        std_auc = cv_result['valid auc-stdv'][-1]
+        n_estimators = len(cv_result['valid auc-mean'])
         
         # Store result
         result_entry = {
@@ -158,7 +182,7 @@ def randomized_search_xgboost(
     }
 
 
-def train_xgboost(
+def train_lightgbm(
     data,
     params=None, 
     tune_hyperparameters=False,
@@ -166,14 +190,16 @@ def train_xgboost(
     n_iter=20,
     n_folds=5,
     random_state=42,
-    model_name='xgboost_model'
+    model_name='lightgbm_model'
 ):
     """
-    Train an XGBoost model on the provided data.
+    Train a LightGBM model on the provided data.
     
     Args:
-        data: pandas DataFrame containing the dataset
-        params: Optional dictionary of XGBoost parameters. If None, uses default parameters.
+        data: Tuple of (X, y, X_train, X_test, y_train, y_test)
+              The full X and y are ignored to follow the Golden Rule.
+              Only the pre-split X_train, X_test, y_train, y_test are used.
+        params: Optional dictionary of LightGBM parameters. If None, uses default parameters.
         tune_hyperparameters: If True, performs randomized search for hyperparameter tuning (default=False)
         param_distributions: Parameter distributions for randomized search (only used if tune_hyperparameters=True)
         n_iter: Number of iterations for randomized search (default=20)
@@ -184,12 +210,20 @@ def train_xgboost(
         dict: Dictionary with keys 'confusion_matrix', 'roc_auc_score', 'accuracy', 'model',
               'feature_importance', 'reduced_features', and optionally 'tuning_results' if tuning was performed
     """
+
+    # We unpack everything, but we consciously only use the pre-split data.
+    # The full X and y are ignored here to follow the Golden Rule.
+    _, _, X_train_full, X_test, y_train_full, y_test = data
+    
     # Perform hyperparameter tuning if requested
     tuning_results = None
     if tune_hyperparameters:
         print("Starting hyperparameter tuning with Randomized Search...")
-        tuning_results = randomized_search_xgboost(
-            data=data,
+        print("Using ONLY training data for CV to prevent data leakage...")
+        # --- CRITICAL FIX: Pass ONLY the training data to the tuning function ---
+        tuning_results = randomized_search_lightgbm(
+            X_train=X_train_full,  # Use the pre-split training set
+            y_train=y_train_full,  # Use the pre-split training set
             param_distributions=param_distributions,
             n_iter=n_iter,
             n_folds=n_folds,
@@ -199,38 +233,52 @@ def train_xgboost(
         params = tuning_results['best_params']
         print(f"Tuning complete. Using best parameters for final model training.\n")
     
-    # Prepare data
-    X, y, X_train, X_test, y_train, y_test = data
-
-    X_train_full, X_test, y_train_full, y_test = Utils.data_split(X, y, ratio=0.3)
-    X_train, X_val, y_train, y_val = Utils.data_split(X_train_full, y_train_full, ratio=0.2) # or use test_size=0.2
+    # This split is for early stopping ONLY. It takes a small piece from the
+    # training set, leaving the original test set untouched and pristine.
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_train_full, y_train_full, test_size=0.2, random_state=42, stratify=y_train_full
+    )
     
-    # Create DMatrix objects
-    dtrain = xgb.DMatrix(X_train, label=y_train, feature_names=X_train.columns.tolist())
-    dval = xgb.DMatrix(X_val, label=y_val, feature_names=X_val.columns.tolist())
-    dtest = xgb.DMatrix(X_test, label=y_test, feature_names=X_test.columns.tolist())
-
-    # Use default XGBoost hyperparameters if not provided
+    # Create LightGBM datasets
+    dtrain = lgb.Dataset(X_train, label=y_train)
+    dval = lgb.Dataset(X_val, label=y_val, reference=dtrain)
+    
+    # Detect CUDA availability if not tuning (tuning already sets device)
+    if not tune_hyperparameters:
+        device = _check_cuda_availability()
+    else:
+        # If tuning was done, device was already set in best_params
+        device = params.get('device', 'cpu')
+    
+    # Use default LightGBM hyperparameters if not provided
     if params is None:
         params = load_best_params()
+        params['device'] = device
+    elif 'device' not in params:
+        # If params provided but no device specified, set it
+        params['device'] = device
     
     # Determine num_boost_round
     num_boost_round = params.pop('n_estimators', 500)
     
     # Train the model with early stopping
-    evals = [(dtrain, 'train'), (dval, 'val')]
+    callbacks = [
+        lgb.early_stopping(stopping_rounds=50),
+        lgb.log_evaluation(period=0)  # Suppress training output
+    ]
+    
     start_time = time.time()
-    model = xgb.train(
+    model = lgb.train(
         params,
         dtrain,
         num_boost_round=num_boost_round,
-        evals=evals,
-        early_stopping_rounds=50,
-        verbose_eval=False  # Suppress training output
+        valid_sets=[dtrain, dval],
+        valid_names=['train', 'val'],
+        callbacks=callbacks
     )
     end_time = time.time()
     # Make predictions
-    y_pred_proba = model.predict(dtest)
+    y_pred_proba = model.predict(X_test, num_iteration=model.best_iteration)
     y_pred = (y_pred_proba > 0.5).astype(int)
     
     # Calculate metrics
@@ -240,11 +288,15 @@ def train_xgboost(
     accuracy = Utils.give_accuracy(y_test, y_pred)
     
     # Get feature importance (using 'gain' as importance type)
-    importance_dict = model.get_score(importance_type='gain')
+    feature_names = X_train.columns.tolist()
+    importance_scores = model.feature_importance(importance_type='gain')
     
     # Normalize feature importance to sum to 1 for threshold comparison
-    total_importance = sum(importance_dict.values())
-    feature_importance = {k: v / total_importance for k, v in importance_dict.items()}
+    total_importance = sum(importance_scores)
+    feature_importance = {
+        feature_names[i]: importance_scores[i] / total_importance 
+        for i in range(len(feature_names))
+    }
     
     # Auto-calculate optimal threshold instead of using hardcoded value
     optimal_threshold = Utils.calculate_optimal_threshold(feature_importance)
@@ -253,11 +305,11 @@ def train_xgboost(
     reduced_features = [feature for feature, importance in feature_importance.items() 
                        if importance >= optimal_threshold]
     
-    print(f"\nXGBoost - Total features: {len(X.columns)}")
+    print(f"\nLightGBM - Total features: {len(feature_names)}")
     # Save model
     models_dir = "models"
     os.makedirs(models_dir, exist_ok=True)
-    model_path = os.path.join(models_dir, f"{model_name}.json")
+    model_path = os.path.join(models_dir, f"{model_name}.txt")
     model.save_model(model_path)
     
     # Return results as dictionary
@@ -280,35 +332,47 @@ def train_xgboost(
 
 
 if __name__ == "__main__":
-    # Example usage
+    # Example usage with PROPER data splitting (no data leakage!)
     df = Utils.data_import('data/data_hep - data_hep.csv')
     
-    # Example 1: Train XGBoost without tuning (default behavior)
-    print("=" * 80)
-    print("Training XGBoost WITHOUT hyperparameter tuning...")
-    print("=" * 80)
-    xgb_results = train_xgboost(df, tune_hyperparameters=False)
-    print("\nXGBoost Results (No Tuning):")
-    print(f"Accuracy: {xgb_results['accuracy']:.4f}")
-    print(f"ROC-AUC: {xgb_results['roc_auc_score']:.4f}")
-    print(f"Confusion Matrix:\n{xgb_results['confusion_matrix']}")
-    print(f"Number of reduced features: {len(xgb_results['reduced_features'])}")
-    print(f"Reduced features: {xgb_results['reduced_features']}")
+    # Get full X and y
+    X, y = Utils.bin_classification(df)
     
-    # Example 2: Train XGBoost WITH hyperparameter tuning (toggle ON)
-    print("\n" + "=" * 80)
-    print("Training XGBoost WITH hyperparameter tuning (Randomized Search)...")
+    # ---- THE ONE AND ONLY DATA SPLIT ----
+    # This is your single source of truth for training and testing.
+    X_train, X_test, y_train, y_test = Utils.data_split(X, y, ratio=0.3, random_state=42)
+    # ------------------------------------
+    
+    # Assemble the data package exactly as your other models expect it
+    data_package = (X, y, X_train, X_test, y_train, y_test)
+    
+    # Example 1: Train LightGBM without tuning (default behavior)
     print("=" * 80)
-    xgb_results_tuned = train_xgboost(
-        df, 
+    print("Training LightGBM WITHOUT hyperparameter tuning...")
+    print("=" * 80)
+    lgbm_results = train_lightgbm(data_package, importance_threshold=0.01, tune_hyperparameters=False)
+    print("\nLightGBM Results (No Tuning):")
+    print(f"Accuracy: {lgbm_results['accuracy']:.4f}")
+    print(f"ROC-AUC: {lgbm_results['roc_auc_score']:.4f}")
+    print(f"Confusion Matrix:\n{lgbm_results['confusion_matrix']}")
+    print(f"Number of reduced features: {len(lgbm_results['reduced_features'])}")
+    print(f"Reduced features: {lgbm_results['reduced_features']}")
+    
+    # Example 2: Train LightGBM WITH hyperparameter tuning (toggle ON)
+    print("\n" + "=" * 80)
+    print("Training LightGBM WITH hyperparameter tuning (Randomized Search)...")
+    print("=" * 80)
+    lgbm_results_tuned = train_lightgbm(
+        data_package,  # Use the SAME data package for consistent results!
+        importance_threshold=0.01, 
         tune_hyperparameters=True,  # Toggle ON
-        n_iter=10,  # Number of random parameter combinations to try
+        n_iter=20,  # Using 20 iterations for a more robust search
         n_folds=5,  # Number of CV folds
         random_state=42
     )
-    print("\nXGBoost Results (With Tuning):")
-    print(f"Accuracy: {xgb_results_tuned['accuracy']:.4f}")
-    print(f"ROC-AUC: {xgb_results_tuned['roc_auc_score']:.4f}")
-    print(f"Confusion Matrix:\n{xgb_results_tuned['confusion_matrix']}")
-    print(f"Number of reduced features: {len(xgb_results_tuned['reduced_features'])}")
-    print(f"Best tuned parameters: {xgb_results_tuned['tuning_results']['best_params']}")
+    print("\nLightGBM Results (With Tuning):")
+    print(f"Accuracy: {lgbm_results_tuned['accuracy']:.4f}")
+    print(f"ROC-AUC: {lgbm_results_tuned['roc_auc_score']:.4f}")
+    print(f"Confusion Matrix:\n{lgbm_results_tuned['confusion_matrix']}")
+    print(f"Number of reduced features: {len(lgbm_results_tuned['reduced_features'])}")
+    print(f"Best tuned parameters: {lgbm_results_tuned['tuning_results']['best_params']}")
