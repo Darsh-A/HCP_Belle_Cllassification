@@ -75,6 +75,18 @@ The code is setup as follow
 ```
 
 
+## Results
+We present a summary of the results of our project.
+
+With the chosen emsemble of different Tree models we find out `XGBoost` performs _consistently_ better then all with gpu-acceoleration)
+
+The below plot shows the ROC comparison of data reduced models:
+<img width="702" height="547" alt="image" src="https://github.com/user-attachments/assets/fdc0ead6-d081-471c-9252-99adf47eb87f" />
+
+and the metrics for best performing model `XGBoost`
+<img width="1790" height="1398" alt="image" src="https://github.com/user-attachments/assets/ef0f1fb6-8274-429a-812f-b0013a2d8155" />
+
+
 -----------------
 
 ## Additional Things:
