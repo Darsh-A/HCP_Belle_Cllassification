@@ -1,7 +1,15 @@
 # Event Classification for HEP
 
 This repo holds the code for the Data Science (IDC409 (Intro to DS and ML)) project of Group 23 
+**Authors:**
 
+Darsh A (MS22068)
+
+Swalih (MS22132)
+
+Rida Haris (MS22023)
+
+Abhiram Srinivas (MS22093)
 ---
 
 ## Table of Contents
