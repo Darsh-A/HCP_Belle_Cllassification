@@ -77,11 +77,11 @@ class Utils:
 
         # Iterate over each model's data in the dictionary
         for model_label, (fpr, tpr, roc_auc) in roc_data_dict.items():
-            print(f"Model: {model_label} | Area Under ROC Curve (AUC): {roc_auc:.4f}")
+            print(f"Model: {model_label} | Area Under ROC Curve (AUC): {roc_auc:.7f}")
             
             # Plot the curve for this model
             plt.plot(fpr, tpr, lw=2, 
-                    label=f'{model_label} ROC (area = {roc_auc:.2f})')
+                    label=f'{model_label} ROC (area = {roc_auc:.5f})')
 
         # --- Plot formatting (done once after all loops) ---
         plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--') # 50/50 chance line
@@ -104,6 +104,25 @@ class Utils:
         from sklearn.metrics import confusion_matrix
         return confusion_matrix(y_test, y_pred)
         
+    @staticmethod
+    def calculate_optimal_threshold(feature_importance_dict, min_features=3, percentile=10):
+        if not feature_importance_dict:
+            return 0.0
+        
+        importances = sorted(feature_importance_dict.values(), reverse=True)
+        
+        if len(importances) <= min_features:
+            return 0.0
+        
+        threshold = np.percentile(importances, percentile)
+        
+        n_kept = sum(1 for imp in importances if imp >= threshold)
+        if n_kept < min_features:
+            threshold = importances[min_features - 1] * 0.99
+        
+        return max(threshold, 1e-6)
+
+
 
 
 class DataTransformations:
