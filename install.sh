@@ -7,6 +7,8 @@ echo "====================================="
 echo "Starting installation script..."
 echo "====================================="
 
+sudo apt-get update
+
 echo "Checking for data fileS..."
 DATA_FILE="data/data_hep - data_hep.csv"
 MIN_SIZE=10000000  # 10MB minimum
@@ -17,6 +19,8 @@ if [ -f "$DATA_FILE" ]; then
     
     if [ "$FILE_SIZE" -lt "$MIN_SIZE" ]; then
         echo "Data file is too small (likely an LFS pointer). Installing Git LFS..."
+        sudo apt-get install -y curl gnupg
+        curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
         sudo apt-get install -y git-lfs
         git lfs install
         echo "Pulling actual data file from LFS..."
@@ -36,6 +40,7 @@ echo "====================================="
 echo "Package Setup"
 echo "====================================="
 
+sudo apt install python3.12-venv
 echo "Creating virtual environment..."
 python3 -m venv venv
 
@@ -49,8 +54,8 @@ echo "Cloning FastBDT..."
 git clone https://github.com/thomaskeck/FastBDT
 
 echo "Updating system packages..."
-sudo apt-get update
 sudo apt-get install -y rpm cmake
+sudo apt-get install -y build-essential
 
 echo "Entering FastBDT directory..."
 cd FastBDT
